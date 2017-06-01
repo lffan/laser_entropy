@@ -9,4 +9,3 @@
 test.*
 .ipynb_checkpoints
 __pycache__
-reference
