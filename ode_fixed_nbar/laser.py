@@ -46,7 +46,7 @@ class LaserOneMode(object):
         self.N_max = None
         self.t_list = []
         self.init_state = None
-        self.rho_vs_t = []
+        # self.rho_vs_t = []
         self.pn_vs_t = []
         self.n_vs_t = []
         self.entr_vs_t = []
@@ -80,10 +80,10 @@ class LaserOneMode(object):
         return self.pn_vs_t
     
     
-    def get_rhos(self):
-        """ return the whole denstiy matrix vs. time
-        """
-        return self.rho_vs_t
+    # def get_rhos(self):
+    #     """ return the whole denstiy matrix vs. time
+    #     """
+    #     return self.rho_vs_t
     
     
     def get_ns(self):
@@ -140,7 +140,7 @@ class LaserOneMode(object):
         self.pn_vs_t = odeint(self._pn_dot, init_pn, t_list, args=(f, g, h,))
 
         # reconstruct rho from pn if only the main diagonal terms exist
-        self.rho_vs_t = np.array([Qobj(np.diag(pn)) for pn in self.pn_vs_t])
+        # self.rho_vs_t = np.array([Qobj(np.diag(pn)) for pn in self.pn_vs_t])
         
         # find average photon numbers
         self.n_vs_t = np.array([sum(pn * n_list) for pn in self.pn_vs_t])
@@ -176,20 +176,25 @@ class LaserOneMode(object):
                       for j in n_list]).reshape(N_max, N_max)
 
         # sovle the ode
+        print('ode solver started')
         self.arrays = odeint(self._rho_nm_dot, init_array, t_list, args=(f, g, h, ))
+        print('ode solver finished')
 
         # convert arrays back to density matrices (rhos)
-        self.rho_vs_t = np.array([Qobj(a.reshape(self.N_max, self.N_max)) 
+        rho_vs_t = np.array([Qobj(a.reshape(self.N_max, self.N_max)) 
                               for a in self.arrays])
         
+        # find von Neumann entropy
+        self.entr_vs_t = np.array([entropy_vn(rho) for rho in rho_vs_t])
+        
         # find diagonal terms
-        self.pn_vs_t = np.array([np.real(np.diag(rho.data.toarray())) for rho in self.rho_vs_t])
+        self.pn_vs_t = np.array([np.real(np.diag(rho.data.toarray())) for rho in rho_vs_t])
+        
+        del rho_vs_t
+        print('rho deleted')
         
         # find average photon numbers
         self.n_vs_t = np.array([sum(pn * n_list) for pn in self.pn_vs_t])
-        
-        # find von Neumann entropy
-        self.entr_vs_t = np.array([entropy_vn(rho) for rho in self.rho_vs_t])
         
     
     def plot_n_vs_time(self):
@@ -268,18 +273,33 @@ class LaserOneMode(object):
     def _rho_nm_dot(self, rho_nm, t, f, g, h):
         """ ode update rul for rho_nm
         """
-        rho = rho_nm.reshape(self.N_max, self.N_max)
         
-        # method 1: 
+        # method 1:
+        # rho = rho_nm.reshape(self.N_max, self.N_max)
+        # rho_new = np.zeros([self.N_max, self.N_max])
+        # ij = range(self.N_max)
+        # for i in ij:
+        #     for j in ij:
+        #         rho_new[i, j] += f[i, j] * rho[i, j]
+        #         if i > 0 and j > 0:
+        #             rho_new[i, j] += g[i, j] * rho[i - 1, j - 1]
+        #         if i < self.N_max - 1 and j < self.N_max - 1:
+        #             rho_new[i, j] += h[i, j] * rho[i + 1, j + 1]
+        # return rho_new.reshape(-1)
+        
+        
+        # method 2 (memory economy)
+        rho_nm.shape = (self.N_max, self.N_max)
         rho_new = np.zeros([self.N_max, self.N_max])
         ij = range(self.N_max)
         for i in ij:
             for j in ij:
-                rho_new[i, j] += f[i, j] * rho[i, j]
+                rho_new[i, j] += f[i, j] * rho_nm[i, j]
                 if i > 0 and j > 0:
-                    rho_new[i, j] += g[i, j] * rho[i - 1, j - 1]
+                    rho_new[i, j] += g[i, j] * rho_nm[i - 1, j - 1]
                 if i < self.N_max - 1 and j < self.N_max - 1:
-                    rho_new[i, j] += h[i, j] * rho[i + 1, j + 1]
+                    rho_new[i, j] += h[i, j] * rho_nm[i + 1, j + 1]
+        del rho_nm
         return rho_new.reshape(-1)
         
         # def helper(ij):
@@ -331,58 +351,58 @@ class LaserOneMode(object):
         return pn, n, entr
 
     
-    def solve_steady_state_lst(self):
-        """ If the state is always diagonal during evolution,
-            get the diagonal terms of the steady state.
-            Solver: `scipy.sparse.linalg.lsqr()`.
-            Since none-zeor solutions are not existed, 
-            use `lsqr` to find the solution with the least squared error.
-        """
-        eq = np.zeros([self.N_max, self.N_max])
-        # y = np.repeat(np.finfo(float).eps, self.N_max)
-        y = np.repeat(0, self.N_max)
+#     def solve_steady_state_lst(self):
+#         """ If the state is always diagonal during evolution,
+#             get the diagonal terms of the steady state.
+#             Solver: `scipy.sparse.linalg.lsqr()`.
+#             Since none-zeor solutions are not existed, 
+#             use `lsqr` to find the solution with the least squared error.
+#         """
+#         eq = np.zeros([self.N_max, self.N_max])
+#         # y = np.repeat(np.finfo(float).eps, self.N_max)
+#         y = np.repeat(0, self.N_max)
 
-        for k in range(self.N_max):
-            eq[k, k] = self._fnm(k, k)
-            if k < self.N_max - 1:
-                eq[k, k + 1] = self._hnm(k, k)
-            if k > 0:
-                eq[k, k - 1] = self._gnm(k, k)        
-        pn = lsqr(eq, y)[0]
+#         for k in range(self.N_max):
+#             eq[k, k] = self._fnm(k, k)
+#             if k < self.N_max - 1:
+#                 eq[k, k + 1] = self._hnm(k, k)
+#             if k > 0:
+#                 eq[k, k - 1] = self._gnm(k, k)        
+#         pn = lsqr(eq, y)[0]
         
-        pn = pn/sum(pn)
-        n = sum(pn * range(self.N_max))
-        entr = sum([- p * np.log2(p) for p in pn if p > 0])
+#         pn = pn/sum(pn)
+#         n = sum(pn * range(self.N_max))
+#         entr = sum([- p * np.log2(p) for p in pn if p > 0])
         
-        return pn, n, entr
+#         return pn, n, entr
     
     
-    def solve_steady_state_three(self):
-        """ if the state is always diagonal during evolution
-            get the diagonal terms of the steady state
-        """
-        eq = np.zeros([self.N_max, self.N_max])
-        eq = np.vstack((eq, np.repeat(1, self.N_max)))
-        y = np.repeat(np.finfo(float).eps, self.N_max)
-        y = np.append(y, 1)
+#     def solve_steady_state_three(self):
+#         """ if the state is always diagonal during evolution
+#             get the diagonal terms of the steady state
+#         """
+#         eq = np.zeros([self.N_max, self.N_max])
+#         eq = np.vstack((eq, np.repeat(1, self.N_max)))
+#         y = np.repeat(np.finfo(float).eps, self.N_max)
+#         y = np.append(y, 1)
 
-        for k in range(self.N_max):
-            eq[k, k] = self._fnm(k, k)
-            if k < self.N_max - 1:
-                eq[k, k + 1] = self._hnm(k, k)
-            if k > 0:
-                eq[k, k - 1] = self._gnm(k, k)
+#         for k in range(self.N_max):
+#             eq[k, k] = self._fnm(k, k)
+#             if k < self.N_max - 1:
+#                 eq[k, k + 1] = self._hnm(k, k)
+#             if k > 0:
+#                 eq[k, k - 1] = self._gnm(k, k)
         
-        eq = np.matrix(eq)
-        y = np.matrix(y).T
-        pn = (eq.T * eq).getI() * eq.T * y
-        pn = np.asarray(pn).reshape(-1)
+#         eq = np.matrix(eq)
+#         y = np.matrix(y).T
+#         pn = (eq.T * eq).getI() * eq.T * y
+#         pn = np.asarray(pn).reshape(-1)
         
-        # pn = pn/sum(pn)
-        n = sum(pn * range(self.N_max))
-        entr = sum([- p * np.log2(p) for p in pn if p > 0])
+#         # pn = pn/sum(pn)
+#         n = sum(pn * range(self.N_max))
+#         entr = sum([- p * np.log2(p) for p in pn if p > 0])
         
-        return pn, n, entr
+#         return pn, n, entr
 
     
 def boltzmann(ratio, N_max):
