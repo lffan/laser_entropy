@@ -35,6 +35,7 @@ def entropy_vs_ratio(ratios, t_list, g, kappa, nbar, N_max, init_psi, solver='pn
         print(str(datetime.now()))
         print('ratio: {:>5.2f}, ra: {:3.4f}, A: {:.3e}, C: {:.3e}, B: {:.3e}\n'. \
               format(alpha, ra, paras['A'], kappa, paras['B']))
+        
         l = laser.LaserOneMode(g, ra, gamma, kappa)
         if solver == 'pn':
             l.pn_evolve(init_psi, N_max, t_list)
