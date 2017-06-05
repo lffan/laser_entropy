@@ -73,7 +73,7 @@ print('ENTROPY COHERENT: {:.4f}'.format(ENTR_COHE))
 
 # In[9]:
 
-ratio = 20/21.0
+ratio = 200/201.0
 pns_thml = laser.boltzmann(ratio, N_max + 1000)
 ENTR_THML = - sum([pn * np.log(pn) for pn in pns_thml if pn > 0])
 print('ENTROPY THERMAL: {:.4f}\n'.format(ENTR_THML))
@@ -83,8 +83,8 @@ print('ENTROPY THERMAL: {:.4f}\n'.format(ENTR_THML))
 
 # In[12]:
 
-ratios1 = (1.05, 1.1, 1.2)
-t_list1 = np.linspace(0, 1000000, 101)
+ratios1 = (1.05, 1.1, 1.2, 1.6)
+t_list1 = np.linspace(0, 1200000, 101)
 l1, n1, entr1 = entropy_utils.entropy_vs_ratio( \
     ratios1, t_list1, G, KAPPA, NBAR, N_max, init_psi, solver)
 
@@ -103,8 +103,8 @@ np.savez('./data/200_vacu_l1.npz', lasers=l1)
 
 # In[16]:
 
-ratios2 = (1.6, 2, 4)
-t_list2 = np.linspace(0, 400000, 101)
+ratios2 = (2, 3, 4, 5)
+t_list2 = np.linspace(0, 200000, 101)
 l2, n2, entr2 = entropy_utils.entropy_vs_ratio( \
     ratios2, t_list2, G, KAPPA, NBAR, N_max, init_psi, solver)
 
@@ -123,8 +123,8 @@ np.savez('./data/200_vacu_l2.npz', lasers=l2)
 
 # In[20]:
 
-ratios3 = (8, 16, 64, 256)
-t_list3 = np.linspace(0, 200000, 101)
+ratios3 = (16, 64, 256, 1024)
+t_list3 = np.linspace(0, 100000, 101)
 l3, n3, entr3 = entropy_utils.entropy_vs_ratio( \
     ratios3, t_list3, G, KAPPA, NBAR, N_max, init_psi, solver)
 
