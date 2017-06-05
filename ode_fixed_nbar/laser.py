@@ -46,7 +46,7 @@ class LaserOneMode(object):
         self.N_max = None
         self.t_list = []
         self.init_state = None
-        # self.rho_vs_t = []
+        self.rho_vs_t = []
         self.pn_vs_t = []
         self.n_vs_t = []
         self.entr_vs_t = []
@@ -140,7 +140,7 @@ class LaserOneMode(object):
         self.pn_vs_t = odeint(self._pn_dot, init_pn, t_list, args=(f, g, h,))
 
         # reconstruct rho from pn if only the main diagonal terms exist
-        # self.rho_vs_t = np.array([Qobj(np.diag(pn)) for pn in self.pn_vs_t])
+        self.rho_vs_t = np.array([Qobj(np.diag(pn)) for pn in self.pn_vs_t])
         
         # find average photon numbers
         self.n_vs_t = np.array([sum(pn * n_list) for pn in self.pn_vs_t])
