@@ -98,6 +98,10 @@ class LaserOneMode(object):
         return self.entr_vs_t
     
     
+    def get_tlist(self):
+        return self.t_list
+    
+    
     def nbar_above_approx(self):
         """ Calculate the average photon number in steady state
             for a laser operated **above threshold** (analytic approximaiton)
