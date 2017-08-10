@@ -155,6 +155,7 @@ class CNB(object):
         """
         eq = np.zeros([self.N_max, self.N_max])
         y = np.repeat(np.finfo(float).eps, self.N_max)
+        # cannot be done numerically if all set to be zero
         # y = np.repeat(0, self.N_max)
 
         for k in range(self.N_max):
