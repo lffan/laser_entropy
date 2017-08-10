@@ -84,6 +84,7 @@ class Laser(MasterEq):
     #     """ return the whole denstiy matrix vs. time
     #     """
     #     return self.rho_vs_t
+        N_max: int
 
     def get_ns(self):
         """ return average photon number vs. time

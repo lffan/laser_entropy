@@ -1,11 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-# import seaborn as sns
 
 from scipy.integrate import odeint, complex_ode
 # from scipy.linalg import solve, lstsq
 from scipy.sparse.linalg import spsolve, lsqr
-# from scipy.stats import poisson
 from scipy.sparse import csr_matrix
 
 
