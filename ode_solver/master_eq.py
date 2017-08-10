@@ -8,8 +8,6 @@ from scipy.sparse.linalg import spsolve, lsqr
 # from scipy.stats import poisson
 from scipy.sparse import csr_matrix
 
-# from multiprocessing import Pool
-# from multiprocessing.dummy import Pool as ThreadPool
 
 from qutip import *
 
@@ -17,78 +15,85 @@ __author__ = "Longfei Fan"
 __version__ = "1.0"
 
 
-class CNB(object):
+class MasterEq(object):
     
-    def __init__(self, N, kappa, TTc, eta):
+    def __init__(self, A, B, C, N_max=None):
         """
-        Condensation of N bosons
+        Master equation solver with gain, saturation, and loss parameters
 
         Parameters
         ----------
-        N: int
-            number of ideal bosons trapped in a 3D hamonic potential
-        kappa: float
-            rate constant
-        TTc: float
-            T/T_c, where T_c is the critical temperature
-        """
-        self.N = N
-        self.kappa = kappa
-        self.TTc = TTc
-        self.eta = eta
+        A: float
+            gain coefficient
+        B: float
+            saturation coefficient
+        C: float
+            loss coefficient
+        N_max: int
+            Fock number used for numerical calculate will in [0, N_max - 1]
+        """ 
+        self.A = A
+        self.B = B
+        self.C = C
+        self.N_max = N_max  
+        # self.A = kappa * (1 + eta) * (N + 1)
+        # self.B = kappa * (1 + eta)
+        # self.C = kappa * N * TTc**3
         
-        self.A = kappa * (1 + eta) * (N + 1)
-        self.B = kappa * (1 + eta)
-        self.C = kappa * N * TTc**3
-        
-        self.N_max = N + 1
-        self.t_list = []
+        # inital state
         self.init_state = None
+        self.t_list = []
         self.rho_vs_t = []
         self.pn_vs_t = []
-        self.n_vs_t = []
+        self.nbar_vs_t = []
         self.entr_vs_t = []
         
         self.steady_pn = None
-        self.steady_n = None
+        self.steady_nbar = None
         self.steady_entr = None
 
     def set_n_max(self, N_max):
-        """ set the truncated photon numbers for numerical calcualtions
+        """
+        set the truncated photon numbers for numerical calcualtions
         """
         self.N_max = N_max
 
-    def get_cnb_args(self):
-        """ return the setup parameters for the atom and cavity
-        """
-        return {'N': self.N, 'rate constant': self.kappa, 
-                'T/T_c': self.TTc, 'cross excitation': self.eta}
+    # def get_cnb_args(self):
+    #     """
+    #     return the setup parameters for the atom and cavity
+    #     """
+    #     return {'N': self.N, 'rate constant': self.kappa, 
+    #             'T/T_c': self.TTc, 'cross excitation': self.eta}
 
     def get_abc(self):
-        """ return A, B, kappa
         """
-        return {'A': self.A, 'B': self.B}
+        return A, B, C
+        """
+        return {'A': self.A, 'B': self.B, 'C': self.C}
 
     def get_tlist(self):
-        """ return t_list of ode
+        """
+        return t_list of ode
         """
         return self.t_list
 
     def get_pns(self):
-        """ return diagonal terms vs. time
+        """
+        return diagonal terms vs. time
         """
         return self.pn_vs_t
     
-    def get_ns(self):
-        """ return average photon numbers vs. time
+    def get_nbars(self):
         """
-        return self.n_vs_t
+        return average photon numbers vs. time
+        """
+        return self.nbar_vs_t
     
     def get_entrs(self):
-        """ return entropy vs. time
+        """
+        return entropy vs. time
         """
         return self.entr_vs_t
-
 
     # solve the ode for pn
     def pn_evolve(self, init_state, t_list):
