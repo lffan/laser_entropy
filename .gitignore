@@ -3,6 +3,9 @@
 *.pyc
 *.dat
 *.npz
+*.csv
+*.pdf
+*.html
 test.*
 .ipynb_checkpoints
 __pycache__
