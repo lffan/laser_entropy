@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from scipy.integrate import odeint, complex_ode
+from scipy.integrate import odeint
 # from scipy.linalg import solve, lstsq
-from scipy.sparse.linalg import spsolve, lsqr
-from scipy.sparse import csr_matrix
+# from scipy.sparse.linalg import spsolve, lsqr
+# from scipy.sparse import csr_matrix
 
 
 from qutip import *
@@ -14,11 +14,18 @@ __version__ = "1.0"
 
 
 class MasterEq(object):
+    """
+    To solve the ode equation given by
+        \dot{p_m} = - G_m * (m+1) * p_m + G_{m-1} * m * p_{m-1}
+                    - L_m * m * p_m + L_{m+1} * (m+1) * p_{m+1}
+        G_m = A - B * (m+1)
+        L_m = C
+    which is a general form for master equastion for lasers and
+    condensation N Boson (CNB) system.
+    """
     
     def __init__(self, A, B, C, N_max=None):
         """
-        Master equation solver with gain, saturation, and loss parameters
-
         Parameters
         ----------
         A: float
@@ -34,9 +41,6 @@ class MasterEq(object):
         self.B = B
         self.C = C
         self.N_max = N_max  
-        # self.A = kappa * (1 + eta) * (N + 1)
-        # self.B = kappa * (1 + eta)
-        # self.C = kappa * N * TTc**3
         
         # inital state
         self.init_state = None
@@ -46,22 +50,15 @@ class MasterEq(object):
         self.nbar_vs_t = []
         self.entr_vs_t = []
         
-        self.steady_pn = None
-        self.steady_nbar = None
-        self.steady_entr = None
+        # self.steady_pn = None
+        # self.steady_nbar = None
+        # self.steady_entr = None
 
-    def set_n_max(self, N_max):
+    def set_N_max(self, N_max):
         """
         set the truncated photon numbers for numerical calcualtions
         """
         self.N_max = N_max
-
-    # def get_cnb_args(self):
-    #     """
-    #     return the setup parameters for the atom and cavity
-    #     """
-    #     return {'N': self.N, 'rate constant': self.kappa, 
-    #             'T/T_c': self.TTc, 'cross excitation': self.eta}
 
     def get_abc(self):
         """
@@ -126,16 +123,14 @@ class MasterEq(object):
         pn_vs_t = np.array([pn[pn > 0] for pn in self.pn_vs_t])
         self.entr_vs_t = np.array([- sum(pn * np.log(pn)) for pn in pn_vs_t])
         
-        
     # G_m
     def _gm(self, m):
         return self.A - self.B * (m + 1)
     
     # L_m
     def _lm(self, m):
-        return self.C + self.kappa * (self.N - m) * self.eta
+        return self.C
     
-        
     # ordinary differential equation for diagonal terms only
     def _pn_dot(self, pn, t, g, l):
         """ ode update rule for pn
@@ -201,3 +196,86 @@ class MasterEq(object):
         ax.set_title("von Neumann Entropy vs. Time", fontsize=14)
         ax.tick_params(axis='both', which='major', labelsize=14)
         return fig, ax
+
+
+class Laser(MasterEq):
+    """ 
+    Numerical simulation of laser given on the equation of motion for the 
+    density matrix of the cavity field in Chapter 11 of Qunatum Optics
+    by Scully and Zubairy
+    """
+    
+    def __init__(self, g, ra, gamma, L, N_max=None):
+        """
+        One mode laser
+        
+        Parameters
+        ----------
+        g: float
+            atom-cavity interation strength
+        ra: float
+            pumping rate
+        gamma: float
+            atom damping rate
+        kappa: float
+            cavity damping rate
+        """
+        self.g = g
+        self.ra = ra
+        self.gamma = gamma
+        super(Laser, self).__init__(2 * ra * g**2 / gamma**2, 
+            8 * ra * g**4 / gamma**4, kappa, N_max)
+
+    def get_atom_cavity_args(self):
+        """
+        return the setup parameters for the atom and cavity
+        """
+        return {'g': self.g, 'ra': self.ra, 'gamma': self.gamma, 'kappa': self.C}
+
+    def nbar_above_threshold(self):
+        """ 
+        Analytic approximaiton of the average photon number for a steady
+        laser operated **above the threshold**
+        """
+        return self.A * (self.A - self.kappa) / self.kappa / self.B
+
+    # G_m, overriding the original one
+    def _gm(self, m):
+        """
+        G_m defined specifically for lasers
+        """
+        return 1 / (self.A + self.B * (m + 1))
+
+
+class CNBoson(MasterEq):
+    """
+    Condensation N Bosons (CNB) in a 3D harmonic trap
+    """
+    def __init__(self, N, TTc, rate, eta):
+        """
+        Condensation N Bosons in a 3D harmonic trap
+
+        Parameters
+        ----------
+        """
+        self.N = N
+        self.TTc = TTc
+        self.rate = rate
+        self.eta = eta
+        super(CNBoson, self).__init__(rate * (1 + eta) * (N + 1), 
+            rate * (1 + eta), rate * N * TTc ** 3, N + 1)
+
+
+    def get_cnb_args(self):
+        """
+        return the parameters for the CNB
+        """
+        return {'N': self.N, 'T/Tc': self.TTc, 'rate constant':self.rate,
+                'cross excitation': self.eta}
+
+
+    def _lm(self, m):
+        """
+        L_m: loss coefficient sepecifically for CNB
+        """
+        return self.C + self.rate * (self.N - m) * self.eta
