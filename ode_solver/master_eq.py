@@ -6,8 +6,9 @@ from scipy.integrate import odeint
 # from scipy.sparse.linalg import spsolve, lsqr
 # from scipy.sparse import csr_matrix
 
-
 from qutip import *
+
+from datetime import datetime
 
 __author__ = "Longfei Fan"
 __version__ = "1.0"
@@ -49,6 +50,9 @@ class MasterEq(object):
         self.pn_vs_t = []
         self.nbar_vs_t = []
         self.entr_vs_t = []
+
+        # check if probability sums to 1
+        self.norm_vs_t = []
         
         # self.steady_pn = None
         # self.steady_nbar = None
@@ -60,13 +64,32 @@ class MasterEq(object):
         """
         self.N_max = N_max
 
+
+    def set_t_list(self, t_list):
+        """
+        set the time points where data will be saved
+        """
+        self.t_list = t_list
+
+    def set_init_state(self, init_state):
+        """
+        set the initial state
+        """
+        self.init_state = init_state
+
     def get_abc(self):
         """
         return A, B, C
         """
         return {'A': self.A, 'B': self.B, 'C': self.C}
 
-    def get_tlist(self):
+    def get_init_state(self):
+        """
+        return the initial state
+        """
+        return self.init_state
+
+    def get_t_list(self):
         """
         return t_list of ode
         """
@@ -91,13 +114,15 @@ class MasterEq(object):
         return self.entr_vs_t
 
     # solve the ode for pn
-    def pn_evolve(self, init_state, t_list):
+    def pn_evolve(self, t_list):
         """ **ode solver for pn**
             init_pn: an array, initial diagonal terms of rho
             N_max: truncted photon numbers
             t_list: a list of time points to be calculated on
             diag: if rho only has diagonal terms, reconstruct rho
         """
+        print(str(datetime.now()))
+
         self.t_list = t_list
         n_list = np.arange(self.N_max)
         
@@ -106,8 +131,8 @@ class MasterEq(object):
         l = np.array([self._lm(m) for m in n_list])
         
         # find diagonal terms
-        if init_state.type is 'ket':
-            init_state = ket2dm(init_state)
+        if self.init_state.type is 'ket':
+            init_state = ket2dm(self.init_state)
         init_pn = np.real(np.diag(init_state.data.toarray()))
         
         # solve the ode for pn
@@ -117,11 +142,16 @@ class MasterEq(object):
         # self.rho_vs_t = np.array([Qobj(np.diag(pn)) for pn in self.pn_vs_t])
         
         # find average photon numbers
-        self.n_vs_t = np.array([sum(pn * n_list) for pn in self.pn_vs_t])
+        self.nbar_vs_t = np.array([sum(pn * n_list) for pn in self.pn_vs_t])
         
         # find von Neumann entropy
         pn_vs_t = np.array([pn[pn > 0] for pn in self.pn_vs_t])
         self.entr_vs_t = np.array([- sum(pn * np.log(pn)) for pn in pn_vs_t])
+
+        # check if the probability sums to 1
+        self.norm_vs_t = np.array([sum(pn) for pn in self.pn_vs_t])
+
+        print(str(datetime.now()))
         
     # G_m
     def _gm(self, m):
@@ -173,11 +203,11 @@ class MasterEq(object):
     def plot_n_vs_time(self):
         """ Plot average photon numbers with respect to time
         """
-        if len(self.n_vs_t) == 0:
+        if len(self.nbar_vs_t) == 0:
             print("Solve the evolution equation first to obtain average photon numbers!")
             return
         fig, ax = plt.subplots(figsize=(6, 4))
-        ax.plot(self.t_list * self.kappa, self.n_vs_t)
+        ax.plot(self.t_list * self.kappa, self.nbar_vs_t)
         ax.set_xlabel("$\kappa t~(\kappa * time)$", fontsize=14)
         ax.set_ylabel("average photon number", fontsize=14)
         ax.set_title("Average Photon Number vs. Time", fontsize=14)
@@ -198,14 +228,35 @@ class MasterEq(object):
         return fig, ax
 
 
+class LaserABC(MasterEq):
+    """
+    Lasers, only coefficients of A, B, and C are given
+    """
+    def __init__(self, A, B, C, N_max=None):
+        super(LaserABC, self).__init__(A, B, C, N_max)
+
+    def nbar_above_threshold(self):
+        """ 
+        Analytic approximaiton of the average photon number for a steady
+        laser operated **above the threshold**
+        """
+        return self.A * (self.A - self.kappa) / self.kappa / self.B
+
+    # G_m, overriding the original one
+    def _gm(self, m):
+        """
+        G_m defined specifically for lasers
+        """
+        return self.A ** 2 / (self.A + self.B * (m + 1))
+
+
 class Laser(MasterEq):
     """ 
     Numerical simulation of laser given on the equation of motion for the 
     density matrix of the cavity field in Chapter 11 of Qunatum Optics
     by Scully and Zubairy
     """
-    
-    def __init__(self, g, ra, gamma, L, N_max=None):
+    def __init__(self, g, ra, gamma, kappa, N_max=None):
         """
         One mode laser
         

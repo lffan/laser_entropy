@@ -107,7 +107,7 @@ def entropy_vs_ratio(ratios, t_list, g, kappa, nbar, N_max, init_psi, solver='pn
 
 #     return l_array, n_dict, entr_dict
 
-
+# test for multi-processing
 # def entropy_vs_ratio(ratios, t_list, g, kappa, nbar, N_max, init_psi, solver='pn'):
 #     """ simulate lasers with different A/C ratios
 #     """
