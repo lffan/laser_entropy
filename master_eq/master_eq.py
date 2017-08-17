@@ -121,7 +121,7 @@ class MasterEq(object):
             t_list: a list of time points to be calculated on
             diag: if rho only has diagonal terms, reconstruct rho
         """
-        print(str(datetime.now()))
+        print(str(datetime.now()) + " START")
 
         self.t_list = t_list
         n_list = np.arange(self.N_max)
@@ -151,7 +151,7 @@ class MasterEq(object):
         # check if the probability sums to 1
         self.norm_vs_t = np.array([sum(pn) for pn in self.pn_vs_t])
 
-        print(str(datetime.now()))
+        print(str(datetime.now()) + " FINISH")
         
     # G_m
     def _gm(self, m):
@@ -200,37 +200,45 @@ class MasterEq(object):
         
 #         return pn, n, entr
 
-    def plot_n_vs_time(self):
-        """ Plot average photon numbers with respect to time
+    def plot_n_vs_time(self, time_factor=1, plot_only=True):
+        """ Plot average Fock numbers with respect to time
         """
         if len(self.nbar_vs_t) == 0:
-            print("Solve the evolution equation first to obtain average photon numbers!")
+            print("Solve the master equation first before plotting!")
             return
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.plot(self.t_list * self.kappa, self.nbar_vs_t)
-        ax.set_xlabel("$\kappa t~(\kappa * time)$", fontsize=14)
-        ax.set_ylabel("average photon number", fontsize=14)
-        ax.set_title("Average Photon Number vs. Time", fontsize=14)
-        ax.tick_params(axis='both', which='major', labelsize=14)
-        return fig, ax
 
-    def plot_entropy_vs_time(self):
-        """ Plot von Neumann entropy of the cavity field with respect to time
-        """
-        # if len(self.entr_vs_t) != len(self.t_list):
-        #     self._calc_entropy()
         fig, ax = plt.subplots(figsize=(6, 4))
-        ax.plot(self.t_list * self.kappa, self.entr_vs_t)
-        ax.set_xlabel("$\kappa t~(\kappa * time)$", fontsize=14)
+        ax.plot(self.t_list * time_factor, self.nbar_vs_t)
+        ax.set_xlabel("$time$", fontsize=14)
+        ax.set_ylabel("average Fock number", fontsize=14)
+        ax.set_title("Average Fock Numbers vs. Time", fontsize=14)
+        ax.tick_params(axis='both', which='major', labelsize=14)
+        
+        if not plot_only:
+            return fig, ax
+
+    def plot_entropy_vs_time(self, time_factor=1, plot_only=True):
+        """ Plot von Neumann entropy with respect to time
+        """
+        if len(self.nbar_vs_t) == 0:
+            print("Solve the master equation first before plotting!")
+            return
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.plot(self.t_list * time_factor, self.entr_vs_t)
+        ax.set_xlabel("$time$", fontsize=14)
         ax.set_ylabel("von Neumann entropy", fontsize=14)
         ax.set_title("von Neumann Entropy vs. Time", fontsize=14)
         ax.tick_params(axis='both', which='major', labelsize=14)
-        return fig, ax
+        
+        if not plot_only:
+            return fig, ax
 
 
 class LaserABC(MasterEq):
     """
-    Lasers, only coefficients of A, B, and C are given
+    One mode lasers, defined by coefficients of A, B, and C
+    g_m is now changed to the full expression without approximations.
     """
     def __init__(self, A, B, C, N_max=None):
         super(LaserABC, self).__init__(A, B, C, N_max)
@@ -242,18 +250,17 @@ class LaserABC(MasterEq):
         """
         return self.A * (self.A - self.kappa) / self.kappa / self.B
 
-    # G_m, overriding the original one
+    # G_m, full expression without approximation, overriding the original one
     def _gm(self, m):
         """
-        G_m defined specifically for lasers
+        G_m defined specifically for one mode lasers
         """
         return self.A ** 2 / (self.A + self.B * (m + 1))
 
 
 class Laser(MasterEq):
     """ 
-    Numerical simulation of laser given on the equation of motion for the 
-    density matrix of the cavity field in Chapter 11 of Qunatum Optics
+    Quantum model of one mode laser discussed in Chapter 11 of Qunatum Optics
     by Scully and Zubairy
     """
     def __init__(self, g, ra, gamma, kappa, N_max=None):
@@ -295,7 +302,7 @@ class Laser(MasterEq):
         """
         G_m defined specifically for lasers
         """
-        return 1 / (self.A + self.B * (m + 1))
+        return self.A ** 2 / (self.A + self.B * (m + 1))
 
 
 class CNBoson(MasterEq):
