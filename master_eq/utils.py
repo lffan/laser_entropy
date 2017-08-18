@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+
+"""Utility functions for saving/reading data and plotting figures."""
+
 from datetime import datetime
 
 import numpy as np
@@ -14,43 +18,10 @@ from qutip import *
 import master_eq
 
 
-def save_cnb_to_csv(cnb1, cnb2, N, t_list, kappa):
-    """
-    save nbar, entropy, and final pn of cnb1 and cnb2 into csv
-    """
-    n_dict = {'$\kappa t$': t_list * kappa}
-    entr_dict = {'$\kappa t$': t_list * kappa}
-    pn_dict = {'n': np.arange(N + 1)}
-
-    n_dict['CNB I'] = cnb1.get_nbars()
-    n_dict['CNB II'] = cnb2.get_nbars()
-    entr_dict['CNB I'] = cnb1.get_entrs()
-    entr_dict['CNB II'] = cnb2.get_entrs()
-    pn_dict['CNB I'] = cnb1.get_pns()[-1]
-    pn_dict['CNB II'] = cnb2.get_pns()[-1]
-
-    entr_dict['I Approx'] = get_entr_approx(cnb1)
-    entr_dict['II Approx'] = get_entr_approx(cnb2)
-    entr_dict['I Diff'] = entr_dict['CNB I'] - entr_dict['I Approx']
-    entr_dict['II Diff'] = entr_dict['CNB II'] - entr_dict['II Approx']
-
-    n_df = pd.DataFrame(n_dict, columns=n_dict.keys())
-    entr_df = pd.DataFrame(entr_dict, columns=entr_dict.keys())
-    pn_df = pd.DataFrame(pn_dict, columns=pn_dict.keys())
-
-    n_df.to_csv('./data/cnb_n_df.csv', index=False)
-    entr_df.to_csv('./data/cnb_entr_df.csv', index=False)
-    pn_df.to_csv('./data/cnb_pn_df.csv', index=False)
-
-
-def read_cnb_from_csv(path, state_name):
-    """
-    read nbar, entropy, and final pn of cnb1 and cnb2 from csv
-    """
-    n_df = pd.read_csv(path + state_name + '_n_df.csv')
-    entr_df = pd.read_csv(path + state_name + '_entr_df.csv')
-    pn_df = pd.read_csv(path + state_name + '_pn_df.csv')
-    return n_df, entr_df, pn_df
+__author__ = 'Longfei Fan'
+__version__ = '1.0'
+__status__ = 'Development'
+__date__ = '08/18/2017'
 
 
 def df_plot(df, xaxis, columns, xlim, xlabel, ylabel, title, style, loc=0,\
@@ -145,6 +116,47 @@ def plot_varn_entr(df, col1, col2, x1, x2):
     ax.set_title("Entropy for " + col1)
 
 
+def save_cnb_to_csv(cnb1, cnb2, N, t_list, kappa):
+    """
+    save nbar, entropy, and final pn of cnb1 and cnb2 into csv
+    """
+    n_dict = {'$\kappa t$': t_list * kappa}
+    entr_dict = {'$\kappa t$': t_list * kappa}
+    pn_dict = {'n': np.arange(N + 1)}
+
+    n_dict['CNB I'] = cnb1.get_nbars()
+    n_dict['CNB II'] = cnb2.get_nbars()
+    entr_dict['CNB I'] = cnb1.get_entrs()
+    entr_dict['CNB II'] = cnb2.get_entrs()
+    pn_dict['CNB I'] = cnb1.get_pns()[-1]
+    pn_dict['CNB II'] = cnb2.get_pns()[-1]
+
+    entr_dict['I Approx'] = get_entr_approx(cnb1)
+    entr_dict['II Approx'] = get_entr_approx(cnb2)
+    entr_dict['I Diff'] = entr_dict['CNB I'] - entr_dict['I Approx']
+    entr_dict['II Diff'] = entr_dict['CNB II'] - entr_dict['II Approx']
+
+    n_df = pd.DataFrame(n_dict, columns=n_dict.keys())
+    entr_df = pd.DataFrame(entr_dict, columns=entr_dict.keys())
+    pn_df = pd.DataFrame(pn_dict, columns=pn_dict.keys())
+
+    n_df.to_csv('./data/cnb_n_df.csv', index=False)
+    entr_df.to_csv('./data/cnb_entr_df.csv', index=False)
+    pn_df.to_csv('./data/cnb_pn_df.csv', index=False)
+
+
+def read_cnb_from_csv(path, state_name):
+    """
+    read nbar, entropy, and final pn of cnb1 and cnb2 from csv
+    """
+    n_df = pd.read_csv(path + state_name + '_n_df.csv')
+    entr_df = pd.read_csv(path + state_name + '_entr_df.csv')
+    pn_df = pd.read_csv(path + state_name + '_pn_df.csv')
+    return n_df, entr_df, pn_df
+
+
+
+
 
 # def entropy_vs_ratio(ratios, t_list, g, kappa, nbar, N_max, init_psi, solver='pn'):
 #     """ simulate lasers with different A/C ratios
@@ -183,15 +195,6 @@ def plot_varn_entr(df, col1, col2, x1, x2):
 #     print(str(datetime.now()))
 
 #     return l_dict, n_dict, entr_dict
-
-
-# def get_para(alpha, nbar, kappa, g):
-#     """ calculate parameters given on ratio, nbar, kappa, and g
-#     """
-#     gamma = np.sqrt(nbar / (alpha - 1)) * 2 * g
-#     ra = 2 * kappa * nbar * alpha / (alpha - 1)
-#     return {'g': g, 'gamma': gamma, 'C': kappa, 'ra': ra,
-#             'A': 2 * ra * g**2 / gamma**2, 'B': 8 * ra * g**4 / gamma**4}
 
 
 # def evolution(alpha, t_list, g, kappa, nbar, N_max, init_psi, solver):
@@ -240,6 +243,7 @@ def plot_varn_entr(df, col1, col2, x1, x2):
 #         entr_dict[key] = l.get_entrs()
 
 #     return l_array, n_dict, entr_dict
+
 
 # test for multi-processing
 # def entropy_vs_ratio(ratios, t_list, g, kappa, nbar, N_max, init_psi, solver='pn'):
