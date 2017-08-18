@@ -51,9 +51,6 @@ class MasterEq(object):
         self.nbar_vs_t = []
         self.entr_vs_t = []
 
-        # check if probability sums to 1
-        self.norm_vs_t = []
-        
         # self.steady_pn = None
         # self.steady_nbar = None
         # self.steady_entr = None
@@ -149,7 +146,7 @@ class MasterEq(object):
         self.entr_vs_t = np.array([- sum(pn * np.log(pn)) for pn in pn_vs_t])
 
         # check if the probability sums to 1
-        self.norm_vs_t = np.array([sum(pn) for pn in self.pn_vs_t])
+        # self.norm_vs_t = np.array([sum(pn) for pn in self.pn_vs_t])
 
         print(str(datetime.now()) + " FINISH")
         
@@ -283,6 +280,7 @@ class Laser(MasterEq):
         self.gamma = gamma
         super(Laser, self).__init__(2 * ra * g**2 / gamma**2, 
             8 * ra * g**4 / gamma**4, kappa, N_max)
+
 
     def get_atom_cavity_args(self):
         """
